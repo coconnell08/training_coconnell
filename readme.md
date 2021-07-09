@@ -1,4 +1,4 @@
 # Christine's Repo
 
 Jasmine's changes
-* and CSO is adding a bullet!
+* and CSO is adding a bullet! and another one! **DJ KHALID!**
