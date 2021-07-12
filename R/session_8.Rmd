@@ -1,0 +1,220 @@
+---
+title: "Session 8"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages, warning=FALSE}
+library(dplyr)
+library(tidyr)
+library(readr)
+```
+
+
+## Data Sources
+
+```{r get data}
+
+# read in the data
+catch_original <- read_csv("https://knb.ecoinformatics.org/knb/d1/mn/v2/object/df35b.302.1")
+
+```
+
+## Clean and Reshape data
+
+Remove unnecessary columns
+
+```{r Remove cols}
+
+catch_data <- catch_original %>% 
+  select(Region, Year, Chinook, Sockeye, Coho, Pink, Chum)
+
+head(catch_data)
+
+```
+
+Alternate strategy to remove cols
+
+```{r}
+
+catch_data <- catch_original %>% 
+  select(-All, -notesRegCode)
+
+head(catch_data)
+
+```
+
+Explore data to check
+
+```{r}
+glimpse(catch_data)
+```
+
+Chinook is coded as a character; need to fix
+
+Check column typing
+
+```{r check col typing}
+
+# unique(catch_data$Chinook)
+
+catch_clean <- catch_data %>% 
+  mutate(Chinook = as.numeric(Chinook))
+
+```
+
+Why were NAs introduced?
+
+```{r}
+
+# where are NAs
+num <- which(is.na(catch_clean$Chinook))
+# what are those rows?
+catch_data[num,]
+
+
+```
+
+Correct "I" to "1" screw up in data
+
+```{r}
+
+catch_clean <- catch_data %>% 
+  mutate(Chinook = if_else(Chinook == "I", 1, as.numeric(Chinook)))
+
+```
+
+
+Reshape data
+
+```{r reshape data}
+
+catch_long <- catch_clean %>% 
+  pivot_longer(cols = -c(Region, Year), names_to = "species", values_to = "catch")
+
+head(catch_long)
+
+head(catch_clean)
+
+```
+
+
+```{r convert back to wide}
+
+catch_wide <- catch_long %>% 
+  pivot_wider(names_from = species, values_from = catch)
+
+head(catch_wide)
+
+```
+
+```{r}
+
+catch_long <- catch_long %>% 
+  rename(catch_thousands = catch)
+
+# rename(catch_long, catch_thousands = catch)
+
+catch_long <- catch_long %>% 
+  mutate(catch = catch_thousands * 1000) %>% 
+  select(-catch_thousands)
+
+
+head(catch_long)
+
+```
+
+```{r calc mean_region}
+
+mean_region <- catch_long %>% 
+  group_by(Region) %>%
+  summarise(catch_mean = mean(catch))
+
+head(mean_region)
+
+```
+
+
+```{r}
+
+n_region <- catch_long %>% 
+  group_by(Region) %>%
+  summarize(n = n())
+
+head(n_region)
+
+```
+
+
+```{r}
+
+sd_region <- catch_long %>% 
+  group_by(Region) %>%
+  summarize(catch_sd = sd(catch))
+
+head(sd_region)
+head(mean_region)
+
+```
+
+
+```{r}
+
+mean_region_species <- catch_long %>% 
+  group_by(Region, species) %>%
+  summarise(catch_mean = mean(catch))
+
+head(mean_region_species)
+
+mean_region_species
+
+```
+
+
+```{r}
+
+SSE_catch <- catch_long %>% 
+  filter(Region == "SSE")
+
+head(SSE_catch)
+
+```
+
+
+```{r}
+
+mean_region <- catch_long %>% 
+  group_by(Region) %>% 
+  summarise(mean_catch = mean(catch)) %>% 
+  arrange(desc(mean_catch))
+
+head(mean_region)
+
+```
+
+
+## Join to Regions Dataset
+```{r get Regions dataset}
+
+region_defs <- read_csv("https://knb.ecoinformatics.org/knb/d1/mn/v2/object/df35b.303.1") %>% 
+    select(code, mgmtArea)
+
+head(region_defs)
+
+
+```
+
+
+```{r}
+
+catch_joined <- left_join(catch_long, region_defs, by = c("Region" = "code"))
+
+head(catch_joined)
+
+```
+
+
+
