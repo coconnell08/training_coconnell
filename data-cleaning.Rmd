@@ -17,6 +17,8 @@ library(tidyr)
 library(ggplot2)
 library(DT)
 library(scales) # install.packages("scales")
+library(patchwork) # install.packages("patchwork")
+
 
 ```
 
@@ -42,5 +44,96 @@ head(esc)
 ```
 
 
+```{r}
+
+
+annual_esc <- esc %>% 
+  separate(sampleDate, c("Year", "Month", "Day"), sep = "-") %>% 
+  mutate(Year = as.numeric(Year)) %>% 
+  group_by(Species, SASAP.Region, Year) %>% 
+  summarize(escapement = sum(DailyCount)) %>% 
+  filter(Species %in% c("Chinook", "Sockeye", "Chum", "Coho", "Pink"))
+
+## `summarise()` has grouped output by 'Species', 'SASAP.Region'. You can override using the `.groups` argument.
+
+head(annual_esc)
+
+
+```
+
+```{r}
+
+ggplot(annual_esc, aes(x = Species, y = escapement, fill = SASAP.Region)) +
+  geom_col()
+
+```
+
+
+# try to use piping to filter into a ggplot
+
+```{r}
+
+annual_esc %>% 
+  filter(SASAP.Region == "Kodiak") %>% 
+ggplot(aes(x = Year, y = escapement, color = Species)) + 
+    geom_line() +
+    geom_point()
+
+```
+
+
+```{r}
+
+kodiak_esc <- annual_esc %>% 
+  filter(SASAP.Region == "Kodiak")
+
+```
+
+
+
+```{r}
+
+ggplot(kodiak_esc, aes(x = Year, y = escapement, color = Species)) + 
+    geom_line() +
+    geom_point() +
+    ylab("Escapement") +
+    ggtitle("Kodiak Salmon Escapement") +
+    theme_bw()
+
+
+
+```
+
+
+```{r}
+
+my_theme <- theme_bw() + 
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+ggplot(kodiak_esc, aes(x = Year, y = escapement, color = Species)) + 
+    geom_line() +
+    geom_point() +
+    scale_y_continuous(labels = comma) +
+    ylab("Escapement") +
+    ggtitle("Kodiak Salmon Escapement") +
+    my_theme
+
+ggsave("kodiak_esc.png", width = 7, height = 7, units = "in")
+
+
+```
+
+
+```{r}
+
+ggplot(annual_esc, aes(x = Year, y = escapement, color = Species)) + 
+    geom_line() +
+    geom_point() +
+    scale_y_continuous(labels = comma) +
+    facet_wrap(~SASAP.Region, scales = "free_y", ncol = 2) +
+    ylab("Escapement") +
+    my_theme
+
+```
 
 
